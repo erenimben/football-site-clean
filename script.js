@@ -177,3 +177,4 @@ liveBtn.addEventListener("click", () => {
 
 loadLiveMatches();
 liveInterval = setInterval(loadLiveMatches, 30000);
+loadPreMatches();

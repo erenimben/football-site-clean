@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Futbol Analiz Platformu</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="container">
+    <header class="hero">
+      <h1>⚽ Futbol Analiz Platformu</h1>
+      <p>Günün maçları, form durumu, H2H, oran analizi ve AI tahminleri</p>
+    </header>
+
+    <section class="top-bar">
+  <button id="preMatchBtn">Maç Öncesi Analiz</button>
+  <button id="liveMatchBtn">Canlı Analiz</button>
+  <span id="statusText">Hazır</span>
+</section>
+
+<h2 class="section-title">Maç Öncesi Analiz</h2>
+<section class="cards" id="preMatches"></section>
+
+<h2 class="section-title">Canlı Analiz</h2>
+<section class="cards" id="liveMatches"></section>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>

@@ -9,6 +9,35 @@ const statusText = document.getElementById("statusText");
 
 let liveInterval = null;
 
+function analyzeMatch(match) {
+  const homePower = Math.random() * 3;
+  const awayPower = Math.random() * 3;
+
+  let prediction = "";
+
+  if (homePower + awayPower > 2.5) {
+    prediction += "2.5 ÜST ⚽ ";
+  } else {
+    prediction += "2.5 ALT 🧊 ";
+  }
+
+  if (homePower > 0.8 && awayPower > 0.8) {
+    prediction += "| KG VAR ✅ ";
+  } else {
+    prediction += "| KG YOK ❌ ";
+  }
+
+  if (homePower > awayPower) {
+    prediction += "| MS 1 🏠";
+  } else if (awayPower > homePower) {
+    prediction += "| MS 2 🚀";
+  } else {
+    prediction += "| BERABER 🤝";
+  }
+
+  return prediction;
+}
+
 function getLiveComment(minute, homeGoals, awayGoals) {
   const totalGoals = (homeGoals || 0) + (awayGoals || 0);
 
@@ -33,6 +62,55 @@ function getLiveComment(minute, homeGoals, awayGoals) {
   }
 
   return "Deplasman tarafı skor avantajını koruyor.";
+}
+
+async function loadPreMatches() {
+  statusText.textContent = "Maç öncesi yükleniyor...";
+
+  try {
+    const res = await fetch("https://v3.football.api-sports.io/fixtures?next=10", {
+      method: "GET",
+      headers: {
+        "x-apisports-key": API_KEY
+      }
+    });
+
+    const data = await res.json();
+    preContainer.innerHTML = "";
+
+    if (!data.response || data.response.length === 0) {
+      statusText.textContent = "Maç bulunamadı ❌";
+      return;
+    }
+
+    data.response.forEach((match) => {
+      const home = match.teams.home.name;
+      const away = match.teams.away.name;
+      const date = match.fixture.date;
+      const league = match.league.name;
+
+      const div = document.createElement("div");
+      div.className = "card";
+
+      div.innerHTML = `
+        <h3>${home} vs ${away}</h3>
+        <div class="meta">${league}</div>
+        <div class="meta">${new Date(date).toLocaleString("tr-TR")}</div>
+
+        <div class="ai-box">
+          <strong>Maç Öncesi Tahmin:</strong>
+          <p>${analyzeMatch(match)}</p>
+        </div>
+      `;
+
+      preContainer.appendChild(div);
+    });
+
+    statusText.textContent = "Maç öncesi yüklendi ✅";
+  } catch (error) {
+    console.error(error);
+    statusText.textContent = "Maç öncesi hata ❌";
+  }
 }
 
 async function loadLiveMatches() {
@@ -76,11 +154,6 @@ async function loadLiveMatches() {
           <strong>Canlı Yorum:</strong>
           <p>${comment}</p>
         </div>
-
-        <div>
-          <span class="tag">Canlı Analiz</span>
-          <span class="tag">Dakika ${minute}</span>
-        </div>
       `;
 
       liveContainer.appendChild(div);
@@ -93,23 +166,7 @@ async function loadLiveMatches() {
   }
 }
 
-function prepareSite() {
-  preContainer.innerHTML = `
-    <div class="card">
-      <h3>Maç Öncesi Analiz</h3>
-      <div class="meta">Bu bölüm bir sonraki aşamada açılacak.</div>
-      <div class="ai-box">
-        <strong>Bilgi:</strong>
-        <p>Şimdilik canlı analiz sistemi aktif bırakıldı.</p>
-      </div>
-    </div>
-  `;
-}
-
-preBtn.addEventListener("click", () => {
-  prepareSite();
-  statusText.textContent = "Maç öncesi bölümü hazırlık aşamasında";
-});
+preBtn.addEventListener("click", loadPreMatches);
 
 liveBtn.addEventListener("click", () => {
   loadLiveMatches();
@@ -118,6 +175,5 @@ liveBtn.addEventListener("click", () => {
   liveInterval = setInterval(loadLiveMatches, 30000);
 });
 
-prepareSite();
 loadLiveMatches();
 liveInterval = setInterval(loadLiveMatches, 30000);

@@ -1,5 +1,6 @@
 const API_KEY = "bf310dcab41a6fea93bcbb94cdbc143b";
 
+// ELEMENTLER
 const preBtn = document.getElementById("preMatchBtn");
 const liveBtn = document.getElementById("liveMatchBtn");
 
@@ -9,70 +10,52 @@ const statusText = document.getElementById("statusText");
 
 let liveInterval = null;
 
+// 🎯 MAÇ ANALİZİ (AI basit)
 function analyzeMatch(match) {
   const homePower = Math.random() * 3;
   const awayPower = Math.random() * 3;
 
   let prediction = "";
 
-  if (homePower + awayPower > 2.5) {
-    prediction += "2.5 ÜST ⚽ ";
-  } else {
-    prediction += "2.5 ALT 🧊 ";
-  }
+  prediction += (homePower + awayPower > 2.5) ? "2.5 ÜST ⚽ " : "2.5 ALT 🧊 ";
+  prediction += (homePower > 0.8 && awayPower > 0.8) ? "| KG VAR ✅ " : "| KG YOK ❌ ";
 
-  if (homePower > 0.8 && awayPower > 0.8) {
-    prediction += "| KG VAR ✅ ";
-  } else {
-    prediction += "| KG YOK ❌ ";
-  }
-
-  if (homePower > awayPower) {
-    prediction += "| MS 1 🏠";
-  } else if (awayPower > homePower) {
-    prediction += "| MS 2 🚀";
-  } else {
-    prediction += "| BERABER 🤝";
-  }
+  if (homePower > awayPower) prediction += "| MS 1 🏠";
+  else if (awayPower > homePower) prediction += "| MS 2 🚀";
+  else prediction += "| BERABER 🤝";
 
   return prediction;
 }
 
+// 🎯 CANLI YORUM
 function getLiveComment(minute, homeGoals, awayGoals) {
   const totalGoals = (homeGoals || 0) + (awayGoals || 0);
 
-  if (minute < 20 && totalGoals === 0) {
+  if (minute < 20 && totalGoals === 0)
     return "Maç yeni başladı. Temkinli başlangıç var.";
-  }
 
-  if (minute >= 20 && minute < 45 && totalGoals === 0) {
+  if (minute < 45 && totalGoals === 0)
     return "İlk yarıda gol baskısı artabilir.";
-  }
 
-  if (totalGoals >= 3) {
+  if (totalGoals >= 3)
     return "Maç tempolu gidiyor. Üst seçenekleri öne çıkabilir.";
-  }
 
-  if (homeGoals === awayGoals) {
+  if (homeGoals === awayGoals)
     return "Maç dengede. Beraberlik riski sürüyor.";
-  }
 
-  if (homeGoals > awayGoals) {
-    return "Ev sahibi şu an üstün oynuyor gibi görünüyor.";
-  }
+  if (homeGoals > awayGoals)
+    return "Ev sahibi üstün oynuyor.";
 
-  return "Deplasman tarafı skor avantajını koruyor.";
+  return "Deplasman avantajlı.";
 }
 
+// 📊 MAÇ ÖNCESİ
 async function loadPreMatches() {
   statusText.textContent = "Maç öncesi yükleniyor...";
 
   try {
     const res = await fetch("https://v3.football.api-sports.io/fixtures?next=10", {
-      method: "GET",
-      headers: {
-        "x-apisports-key": API_KEY
-      }
+      headers: { "x-apisports-key": API_KEY }
     });
 
     const data = await res.json();
@@ -83,22 +66,17 @@ async function loadPreMatches() {
       return;
     }
 
-    data.response.forEach((match) => {
-      const home = match.teams.home.name;
-      const away = match.teams.away.name;
-      const date = match.fixture.date;
-      const league = match.league.name;
-
+    data.response.forEach(match => {
       const div = document.createElement("div");
       div.className = "card";
 
       div.innerHTML = `
-        <h3>${home} vs ${away}</h3>
-        <div class="meta">${league}</div>
-        <div class="meta">${new Date(date).toLocaleString("tr-TR")}</div>
+        <h3>${match.teams.home.name} vs ${match.teams.away.name}</h3>
+        <div class="meta">${match.league.name}</div>
+        <div class="meta">${new Date(match.fixture.date).toLocaleString("tr-TR")}</div>
 
         <div class="ai-box">
-          <strong>Maç Öncesi Tahmin:</strong>
+          <strong>Tahmin:</strong>
           <p>${analyzeMatch(match)}</p>
         </div>
       `;
@@ -107,133 +85,78 @@ async function loadPreMatches() {
     });
 
     statusText.textContent = "Maç öncesi yüklendi ✅";
-  } catch (error) {
-    console.error(error);
-    statusText.textContent = "Maç öncesi hata ❌";
+
+  } catch (err) {
+    console.error(err);
+    statusText.textContent = "Hata ❌";
   }
 }
 
+// 🔴 CANLI + BUGÜN
 async function loadLiveMatches() {
-  statusText.textContent = "Canlı maçlar yükleniyor...";
+  statusText.textContent = "Maçlar yükleniyor...";
 
   try {
     const today = new Date().toISOString().split("T")[0];
 
-    let response = await fetch("https://v3.football.api-sports.io/fixtures?live=all", {
-      method: "GET",
-      headers: {
-        "x-apisports-key": API_KEY
-      }
+    // 1️⃣ CANLI
+    let res = await fetch("https://v3.football.api-sports.io/fixtures?live=all", {
+      headers: { "x-apisports-key": API_KEY }
     });
 
-    let data = await response.json();
+    let data = await res.json();
 
+    // 2️⃣ CANLI YOKSA BUGÜN
     if (!data.response || data.response.length === 0) {
-      response = await fetch(`https://v3.football.api-sports.io/fixtures?date=${today}`, {
-        method: "GET",
-        headers: {
-          "x-apisports-key": API_KEY
-        }
+      res = await fetch(`https://v3.football.api-sports.io/fixtures?date=${today}`, {
+        headers: { "x-apisports-key": API_KEY }
       });
 
-      data = await response.json();
+      data = await res.json();
     }
 
     liveContainer.innerHTML = "";
 
     if (!data.response || data.response.length === 0) {
-      statusText.textContent = "Bugün maç bulunamadı ❌";
+      statusText.textContent = "Bugün maç yok ❌";
       return;
     }
 
-    data.response.forEach((match) => {
-      const home = match.teams.home.name;
-      const away = match.teams.away.name;
+    data.response.forEach(match => {
       const minute = match.fixture.status.elapsed ?? "-";
       const homeGoals = match.goals.home ?? 0;
       const awayGoals = match.goals.away ?? 0;
-      const league = match.league.name;
-
-      const comment = getLiveComment(
-        typeof minute === "number" ? minute : 0,
-        homeGoals,
-        awayGoals
-      );
 
       const div = document.createElement("div");
       div.className = "card";
 
       div.innerHTML = `
-        <h3>${home} vs ${away}</h3>
-        <div class="meta">${league}</div>
-        <div class="meta">Dakika: ${minute} | Skor: ${homeGoals} - ${awayGoals}</div>
+        <h3>${match.teams.home.name} vs ${match.teams.away.name}</h3>
+        <div class="meta">${match.league.name}</div>
+        <div class="meta">Dakika: ${minute} | ${homeGoals} - ${awayGoals}</div>
 
         <div class="ai-box">
-          <strong>Canlı Yorum:</strong>
-          <p>${comment}</p>
+          <strong>Yorum:</strong>
+          <p>${getLiveComment(
+            typeof minute === "number" ? minute : 0,
+            homeGoals,
+            awayGoals
+          )}</p>
         </div>
       `;
 
       liveContainer.appendChild(div);
     });
 
-    statusText.textContent = "Canlı / günün maçları yüklendi ✅";
-  } catch (error) {
-    console.error(error);
-    statusText.textContent = "Bağlantı hatası ❌";
-  }
-}  statusText.textContent = "Canlı maçlar yükleniyor...";
+    statusText.textContent = "Veriler yüklendi ✅";
 
-  try {
-    const res = await fetch("https://v3.football.api-sports.io/fixtures?live=all", {
-      method: "GET",
-      headers: {
-        "x-apisports-key": API_KEY
-      }
-    });
-
-    const data = await res.json();
-    liveContainer.innerHTML = "";
-
-    if (!data.response || data.response.length === 0) {
-      statusText.textContent = "Şu anda canlı maç yok";
-      return;
-    }
-
-    data.response.forEach((match) => {
-      const home = match.teams.home.name;
-      const away = match.teams.away.name;
-      const minute = match.fixture.status.elapsed ?? 0;
-      const homeGoals = match.goals.home ?? 0;
-      const awayGoals = match.goals.away ?? 0;
-      const league = match.league.name;
-
-      const comment = getLiveComment(minute, homeGoals, awayGoals);
-
-      const div = document.createElement("div");
-      div.className = "card";
-
-      div.innerHTML = `
-        <h3>${home} vs ${away}</h3>
-        <div class="meta">${league}</div>
-        <div class="meta">Dakika: ${minute} | Skor: ${homeGoals} - ${awayGoals}</div>
-
-        <div class="ai-box">
-          <strong>Canlı Yorum:</strong>
-          <p>${comment}</p>
-        </div>
-      `;
-
-      liveContainer.appendChild(div);
-    });
-
-    statusText.textContent = "Canlı veriler güncellendi ✅";
-  } catch (error) {
-    console.error(error);
-    statusText.textContent = "Bağlantı hatası ❌";
+  } catch (err) {
+    console.error(err);
+    statusText.textContent = "API hata ❌";
   }
 }
 
+// 🎯 EVENTLER
 preBtn.addEventListener("click", loadPreMatches);
 
 liveBtn.addEventListener("click", () => {
@@ -243,6 +166,7 @@ liveBtn.addEventListener("click", () => {
   liveInterval = setInterval(loadLiveMatches, 30000);
 });
 
+// 🚀 OTOMATİK BAŞLAT
 loadLiveMatches();
-liveInterval = setInterval(loadLiveMatches, 30000);
 loadPreMatches();
+liveInterval = setInterval(loadLiveMatches, 30000);

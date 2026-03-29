@@ -117,6 +117,74 @@ async function loadLiveMatches() {
   statusText.textContent = "Canlı maçlar yükleniyor...";
 
   try {
+    const today = new Date().toISOString().split("T")[0];
+
+    let response = await fetch("https://v3.football.api-sports.io/fixtures?live=all", {
+      method: "GET",
+      headers: {
+        "x-apisports-key": API_KEY
+      }
+    });
+
+    let data = await response.json();
+
+    if (!data.response || data.response.length === 0) {
+      response = await fetch(`https://v3.football.api-sports.io/fixtures?date=${today}`, {
+        method: "GET",
+        headers: {
+          "x-apisports-key": API_KEY
+        }
+      });
+
+      data = await response.json();
+    }
+
+    liveContainer.innerHTML = "";
+
+    if (!data.response || data.response.length === 0) {
+      statusText.textContent = "Bugün maç bulunamadı ❌";
+      return;
+    }
+
+    data.response.forEach((match) => {
+      const home = match.teams.home.name;
+      const away = match.teams.away.name;
+      const minute = match.fixture.status.elapsed ?? "-";
+      const homeGoals = match.goals.home ?? 0;
+      const awayGoals = match.goals.away ?? 0;
+      const league = match.league.name;
+
+      const comment = getLiveComment(
+        typeof minute === "number" ? minute : 0,
+        homeGoals,
+        awayGoals
+      );
+
+      const div = document.createElement("div");
+      div.className = "card";
+
+      div.innerHTML = `
+        <h3>${home} vs ${away}</h3>
+        <div class="meta">${league}</div>
+        <div class="meta">Dakika: ${minute} | Skor: ${homeGoals} - ${awayGoals}</div>
+
+        <div class="ai-box">
+          <strong>Canlı Yorum:</strong>
+          <p>${comment}</p>
+        </div>
+      `;
+
+      liveContainer.appendChild(div);
+    });
+
+    statusText.textContent = "Canlı / günün maçları yüklendi ✅";
+  } catch (error) {
+    console.error(error);
+    statusText.textContent = "Bağlantı hatası ❌";
+  }
+}  statusText.textContent = "Canlı maçlar yükleniyor...";
+
+  try {
     const res = await fetch("https://v3.football.api-sports.io/fixtures?live=all", {
       method: "GET",
       headers: {
